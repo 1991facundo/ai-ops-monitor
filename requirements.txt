@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+langchain
+openai
+qdrant-client
+numpy
+pandas
+sqlalchemy
+python-dotenv
