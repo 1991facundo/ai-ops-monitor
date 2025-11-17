@@ -25,3 +25,6 @@ class EventDB(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
     # el atributo se llama metadata_json, ya no metadata porque es palabra reservada en SQLAlchemy
     metadata_json = Column(Text)  # JSON serializado
+
+def init_db():
+    Base.metadata.create_all(bind=engine)
