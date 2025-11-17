@@ -11,7 +11,7 @@ services:
       - ./:/app  # ver cambios sin reconstruir todo en desarrollo
 
   qdrant:
-    image: qdrant/qdrant:v1.3.5
+    image: qdrant/qdrant:latest
     container_name: aiops_qdrant
     ports:
       - "6333:6333"
