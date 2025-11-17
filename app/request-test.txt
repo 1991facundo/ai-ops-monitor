@@ -5,11 +5,11 @@ Testeando el server response de @app.post("/events")
   "type": "fallback",
   "severity": "warning",
   "message": "LLM fallback triggered",
+  "timestamp": "2025-11-17T00:11:12.343696",
   "metadata": {
     "primary_model": "gpt-4.1",
     "fallback_model": "gpt-4o-mini",
     "latency_ms": 4200
   }
 }
-
 

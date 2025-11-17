@@ -82,7 +82,7 @@ async def receive_event(event: Event, db: Session = Depends(get_db)):
             qdrant_client.upsert(
                 collection_name=COLLECTION_NAME,
                 points=[{
-                    "id": str(db_event.id),  # lo guardamos como string
+                    "id": db_event.id,
                     "vector": vector,
                     "payload": {
                         "source": event.source,
