@@ -1,3 +1,37 @@
+###EVENTOS PARA TESTEAR
+
+EVENTO 1
+
+curl -X POST "http://localhost:5678/webhook-test/events" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "payments",
+    "type": "service_error",
+    "severity": "critical",
+    "message": "Timeout al conectar con la base de datos",
+    "timestamp": "2025-11-18T10:32:11.123456",
+    "metadata": {
+      "retryCount": 3
+    }
+  }'
+
+EVENTO 2
+
+curl -X POST "http://localhost:5678/webhook-test/events" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "payments",
+    "type": "service_error",
+    "severity": "critical",
+    "message": "Timeout al conectar con la base de datos",
+    "timestamp": "2025-11-18T15:30:00",
+    "metadata": {
+      "service": "payments",
+      "retryCount": 3
+    }
+  }'
+
+### EVENTOS PARA ALMACENAR
 EVENTO 1: servicio payments — CRITICAL timeout
 
 curl -X POST "http://localhost:8000/events" \
