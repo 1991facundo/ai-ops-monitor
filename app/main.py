@@ -118,7 +118,7 @@ async def find_similar_events(query_event: Event, db: Session = Depends(get_db))
         )
 
       # 2) Buscar en Qdrant los más similares
-    search_result = qdrant_client.search_points(
+    search_result = qdrant_client.search(
         collection_name=COLLECTION_NAME,
         query=query_vector,
         limit=5,
@@ -232,7 +232,10 @@ async def list_events(
 
 
 # Cliente Qdrant dentro del entorno Docker
-qdrant_client = QdrantClient(host="qdrant", port=6333)
+qdrant_client = QdrantClient(
+    url="http://qdrant:6333",
+    prefer_grpc=False
+)
 
 COLLECTION_NAME = "events_vectors"
 VECTOR_SIZE = int(os.getenv("VECTOR_DIMENSION", "1536"))
