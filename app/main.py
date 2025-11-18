@@ -117,10 +117,13 @@ async def find_similar_events(query_event: Event, db: Session = Depends(get_db))
             status_code=500, detail="Error generating embedding for similarity search"
         )
 
-    # 2) Buscar en Qdrant los más similares
-    search_result = qdrant_client.search(
-        collection_name=COLLECTION_NAME, query_vector=query_vector, limit=5
+      # 2) Buscar en Qdrant los más similares
+    search_result = qdrant_client.search_points(
+        collection_name=COLLECTION_NAME,
+        query=query_vector,
+        limit=5,
     )
+
 
     similar_ids = [int(point.id) for point in search_result]
     if not similar_ids:
