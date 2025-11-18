@@ -1,15 +1,12 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Text, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
 
 DATABASE_URL = "sqlite:///./events.db"
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}
-)
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(bind=engine)
 
 Base = declarative_base()
 
@@ -19,12 +16,25 @@ class EventDB(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     source = Column(String, index=True)
-    type = Column(String, index=True)
-    severity = Column(String, index=True)
+    level = Column(String, index=True)
     message = Column(Text)
-    timestamp = Column(DateTime, default=datetime.utcnow)
-    # el atributo se llama metadata_json, ya no metadata porque es palabra reservada en SQLAlchemy
-    metadata_json = Column(Text)  # JSON serializado
+    timestamp = Column(Text, default=datetime.utcnow)
+    data = Column(Text)
+
 
 def init_db():
-    Base.metadata.create_all(bind=engine)
+    with engine.connect() as conn:
+        conn.execute(
+            text(
+                """
+        CREATE TABLE IF NOT EXISTS events (
+            id INTEGER PRIMARY KEY,
+            source TEXT,
+            timestamp TEXT,
+            level TEXT,
+            message TEXT,
+            data TEXT
+        );
+        """
+            )
+        )
