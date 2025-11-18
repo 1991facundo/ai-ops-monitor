@@ -159,80 +159,73 @@ async def find_similar_events(query_event: Event, db: Session = Depends(get_db))
 @app.get("/events", response_model=List[EventDB])
 async def list_events(
     source: Optional[str] = None,
-    level: Optional[str] = None,
+    severity: Optional[str] = None,
     limit: int = 100,
     db: Session = Depends(get_db),
 ):
     """
-    Lista eventos desde la tabla events con filtros opcionales por source y level.
-    Usa los nombres de columnas reales definidos en app/database.py.
+    Lista eventos usando el modelo ORM EventDBModel.
+    Filtra opcionalmente por source y severity.
+    Reconstruye type y metadata a partir del JSON guardado en data.
     """
 
     try:
-        base_query = """
-            SELECT
-                id,
-                source,
-                timestamp,
-                level,
-                message,
-                data
-            FROM events
-        """
-
-        filters = []
-        params: dict = {}
+        # Construimos la query con SQLAlchemy, sin SQL crudo
+        query = db.query(EventDBModel)
 
         if source is not None:
-            filters.append("source = :source")
-            params["source"] = source
+            query = query.filter(EventDBModel.source == source)
 
-        if level is not None:
-            filters.append("level = :level")
-            params["level"] = level
+        if severity is not None:
+            # En el modelo ORM el campo se llama "level" (severity lógico)
+            query = query.filter(EventDBModel.level == severity)
 
-        if filters:
-            base_query += " WHERE " + " AND ".join(filters)
+        # Ordenar por timestamp descendente y limitar
+        query = query.order_by(EventDBModel.timestamp.desc()).limit(limit)
+        rows = query.all()
 
-        base_query += " ORDER BY timestamp DESC LIMIT :limit"
-        params["limit"] = limit
+        events: list[dict] = []
 
-        result = db.execute(text(base_query), params)
-        rows = result.fetchall()
-
-        events = []
         for row in rows:
-            row_id = row[0]
-            row_source = row[1]
-            row_timestamp = row[2]
-            row_level = row[3]
-            row_message = row[4]
-            row_data_raw = row[5]
+            # row.data es el JSON string que guardamos en el POST /events
+            event_type = ""
+            metadata_dict = {}
 
-            try:
-                data = (
-                    json.loads(row_data_raw)
-                    if isinstance(row_data_raw, str) and row_data_raw
-                    else None
-                )
-            except Exception:
-                data = None
+            if row.data:
+                try:
+                    json_data = json.loads(row.data)
+                    # En el POST metemos "type" y el resto del metadata adentro
+                    event_type = json_data.get("type", "") or ""
+                    # Si guardaste metadata separado, lo tomamos; si no, usamos el resto del dict
+                    metadata_dict = json_data.get("metadata", {})
+                    if not metadata_dict:
+                        # fallback: todo excepto type/severity
+                        metadata_dict = {
+                            k: v
+                            for k, v in json_data.items()
+                            if k not in ("type", "severity")
+                        }
+                except Exception:
+                    metadata_dict = {}
 
             events.append(
                 {
-                    "id": row_id,
-                    "source": row_source,
-                    "timestamp": row_timestamp,
-                    "level": row_level,
-                    "message": row_message,
-                    "data": data,
+                    "id": row.id,
+                    "source": row.source,
+                    "timestamp": row.timestamp,
+                    "type": event_type,
+                    "severity": row.level,  # "level" en la DB, "severity" en el modelo lógico
+                    "message": row.message,
+                    "metadata": metadata_dict,
                 }
             )
 
         return events
+
     except Exception:
         logger.exception("Error listing events")
         raise
+
 
 
 # Cliente Qdrant dentro del entorno Docker
