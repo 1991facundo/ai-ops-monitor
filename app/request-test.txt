@@ -1,15 +1,77 @@
-Testeando el server response de @app.post("/events")
+EVENTO 1: servicio payments — CRITICAL timeout
 
-{
-  "source": "n8n",
-  "type": "fallback",
-  "severity": "warning",
-  "message": "LLM fallback triggered",
-  "timestamp": "2025-11-17T00:11:12.343696",
-  "metadata": {
-    "primary_model": "gpt-4.1",
-    "fallback_model": "gpt-4o-mini",
-    "latency_ms": 4200
-  }
-}
+curl -X POST "http://localhost:8000/events" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "payments",
+    "timestamp": "2025-11-18T12:00:00",
+    "type": "service_error",
+    "severity": "critical",
+    "message": "Timeout connecting to database",
+    "metadata": {
+      "service": "payments",
+      "error_code": 5041
+    }
+  }'
 
+  EVENTO 2: servicio auth — CRITICAL failure
+
+  curl -X POST "http://localhost:8000/events" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "auth",
+    "timestamp": "2025-11-18T12:05:00",
+    "type": "authentication_failure",
+    "severity": "critical",
+    "message": "OAuth provider unreachable",
+    "metadata": {
+      "provider": "google",
+      "latency_ms": 9000
+    }
+  }'
+
+EVENTO 3: servicio inventory — WARNING
+
+curl -X POST "http://localhost:8000/events" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "inventory",
+    "timestamp": "2025-11-18T12:10:00",
+    "type": "degraded_performance",
+    "severity": "warning",
+    "message": "Redis latency above threshold",
+    "metadata": {
+      "latency_ms": 320,
+      "threshold_ms": 250
+    }
+  }'
+
+EVENTO 4: servicio payments — WARNING
+
+curl -X POST "http://localhost:8000/events" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "payments",
+    "timestamp": "2025-11-18T12:12:00",
+    "type": "slow_request",
+    "severity": "warning",
+    "message": "Payment API response slower than expected",
+    "metadata": {
+      "avg_response_ms": 1200
+    }
+  }'
+
+EVENTO 5: servicio users — INFO
+
+curl -X POST "http://localhost:8000/events" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "users",
+    "timestamp": "2025-11-18T12:15:00",
+    "type": "activity_log",
+    "severity": "info",
+    "message": "Daily summary generation completed",
+    "metadata": {
+      "records_processed": 4821
+    }
+  }'
