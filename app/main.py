@@ -1,7 +1,8 @@
+import logging
 import os
 import json
 import openai
-from typing import List
+from typing import List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,6 +15,9 @@ from app.schemas import EventDB
 
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams
+
+
+logger = logging.getLogger(__name__)
 
 
 app = FastAPI(title="AI Ops Monitor API", version="1.0")
@@ -154,46 +158,81 @@ async def find_similar_events(query_event: Event, db: Session = Depends(get_db))
 
 @app.get("/events", response_model=List[EventDB])
 async def list_events(
-    level: str | None = None,
-    source: str | None = None,
+    source: Optional[str] = None,
+    level: Optional[str] = None,
     limit: int = 100,
     db: Session = Depends(get_db),
 ):
-    base_query = "SELECT id, source, timestamp, level, message, data FROM events"
-    filters = []
-    params: dict = {}
+    """
+    Lista eventos desde la tabla events con filtros opcionales por source y level.
+    Usa los nombres de columnas reales definidos en app/database.py.
+    """
 
-    if level:
-        filters.append("level = :level")
-        params["level"] = level
+    try:
+        base_query = """
+            SELECT
+                id,
+                source,
+                timestamp,
+                level,
+                message,
+                data
+            FROM events
+        """
 
-    if source:
-        filters.append("source = :source")
-        params["source"] = source
+        filters = []
+        params: dict = {}
 
-    if filters:
-        base_query += " WHERE " + " AND ".join(filters)
+        if source is not None:
+            filters.append("source = :source")
+            params["source"] = source
 
-    base_query += " ORDER BY timestamp DESC LIMIT :limit"
-    params["limit"] = limit
+        if level is not None:
+            filters.append("level = :level")
+            params["level"] = level
 
-    result = db.execute(text(base_query), params)
-    rows = result.fetchall()
+        if filters:
+            base_query += " WHERE " + " AND ".join(filters)
 
-    events: list[dict] = []
-    for row in rows:
-        events.append(
-            {
-                "id": row[0],
-                "source": row[1],
-                "timestamp": row[2],
-                "level": row[3],
-                "message": row[4],
-                "data": row[5],
-            }
-        )
+        base_query += " ORDER BY timestamp DESC LIMIT :limit"
+        params["limit"] = limit
 
-    return events
+        result = db.execute(text(base_query), params)
+        rows = result.fetchall()
+
+        events = []
+        for row in rows:
+            row_id = row[0]
+            row_source = row[1]
+            row_timestamp = row[2]
+            row_level = row[3]
+            row_message = row[4]
+            row_data_raw = row[5]
+
+            try:
+                data = (
+                    json.loads(row_data_raw)
+                    if isinstance(row_data_raw, str) and row_data_raw
+                    else None
+                )
+            except Exception:
+                data = None
+
+            events.append(
+                {
+                    "id": row_id,
+                    "source": row_source,
+                    "timestamp": row_timestamp,
+                    "level": row_level,
+                    "message": row_message,
+                    "data": data,
+                }
+            )
+
+        return events
+    except Exception:
+        logger.exception("Error listing events")
+        raise
 
 
 # Cliente Qdrant dentro del entorno Docker
